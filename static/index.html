@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Spend Tracker</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 680px; margin: 2rem auto; padding: 0 1rem; color: #222; }
+    .card { border: 1px solid #e2e8f0; padding: 1.25rem; border-radius: 8px; margin-bottom: 1.5rem; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    label { display: block; margin-top: 0.75rem; font-weight: 600; font-size: 0.9rem; }
+    input, button { width: 100%; padding: 8px 10px; margin-top: 4px; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 4px; }
+    button { background: #2563eb; color: white; border: none; margin-top: 1.25rem; font-weight: 600; cursor: pointer; }
+    button:hover { background: #1d4ed8; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; }
+    th { background: #f8fafc; }
+  </style>
+</head>
+<body>
+  <h2>Mini Spend Tracker</h2>
+
+  <div class="card" id="summaryCard">
+    <h3>Spending Summary</h3>
+    <p>Loading summary...</p>
+  </div>
+
+  <div class="card">
+    <h3>Log New Expense</h3>
+    <form id="expenseForm">
+      <label>Amount (₹ / $):</label>
+      <input type="number" step="0.01" id="amount" required min="0.01">
+      
+      <label>Category:</label>
+      <input type="text" id="category" placeholder="Food, Rent, Bills" required>
+      
+      <label>Date:</label>
+      <input type="date" id="date" required>
+      
+      <label>Note (Optional):</label>
+      <input type="text" id="note" placeholder="Short description">
+      
+      <button type="submit">Add Expense</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>Logged Expenses</h3>
+    <table id="expenseTable">
+      <thead>
+        <tr><th>Date</th><th>Category</th><th>Amount</th><th>Note</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    document.getElementById('date').value = new Date().toISOString().split('T')[0];
+
+    async function loadSummary() {
+      const res = await fetch('/summary');
+      const data = await res.json();
+      let catHtml = Object.entries(data.by_category).map(([k, v]) => `<li><b>${k}:</b> ₹${v}</li>`).join('');
+      let mom = data.month_over_month_change_pct !== null ? `${data.month_over_month_change_pct}%` : 'N/A (No prior month data)';
+      document.getElementById('summaryCard').innerHTML = `
+        <h3>Spending Summary</h3>
+        <p><b>Total Spend:</b> ₹${data.total_spend}</p>
+        <p><b>Current Month:</b> ₹${data.current_month_spend} | <b>Previous Month:</b> ₹${data.previous_month_spend}</p>
+        <p><b>Month-over-Month Change:</b> ${mom}</p>
+        <ul style="margin: 0; padding-left: 1.25rem;">${catHtml || '<li>No records logged yet</li>'}</ul>
+      `;
+    }
+
+    async function loadExpenses() {
+      const res = await fetch('/expenses');
+      const items = await res.json();
+      const tbody = document.querySelector('#expenseTable tbody');
+      tbody.innerHTML = items.map(e => `
+        <tr><td>${e.date}</td><td>${e.category}</td><td>₹${e.amount}</td><td>${e.note || '-'}</td></tr>
+      `).join('');
+    }
+
+    document.getElementById('expenseForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const payload = {
+        amount: parseFloat(document.getElementById('amount').value),
+        category: document.getElementById('category').value,
+        date: document.getElementById('date').value,
+        note: document.getElementById('note').value
+      };
+      const res = await fetch('/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        document.getElementById('amount').value = '';
+        document.getElementById('category').value = '';
+        document.getElementById('note').value = '';
+        loadSummary();
+        loadExpenses();
+      } else {
+        const err = await res.json();
+        alert('Error: ' + JSON.stringify(err.detail));
+      }
+    };
+
+    loadSummary();
+    loadExpenses();
+  </script>
+</body>
+</html>
