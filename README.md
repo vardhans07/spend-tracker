@@ -20,4 +20,9 @@ A lightweight, robust expense tracking REST API built with Python, FastAPI, SQLi
    cd spend-tracker
 
 
+ **Run tests:**
+   ```bash
+   pytest
+
+
 <img width="1009" height="438" alt="image" src="https://github.com/user-attachments/assets/651406cf-e9e9-4ac9-bd43-bf3a9740dad1" />
