@@ -2,12 +2,18 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
 from app.main import app
 
+# StaticPool ensures the in-memory SQLite database stays open across all connections/threads
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def override_get_db():
@@ -41,7 +47,7 @@ def test_create_expense_success():
     assert "id" in data
 
 def test_create_expense_validation_error():
-    # Negative amount should fail
+    # Negative amount should fail validation
     response = client.post("/expenses", json={
         "amount": -50.0,
         "category": "Groceries",
