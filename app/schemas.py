@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from datetime import date
 from typing import Optional, Dict
 
@@ -17,10 +17,8 @@ class ExpenseCreate(BaseModel):
         return cleaned.title()
 
 class ExpenseResponse(ExpenseCreate):
+    model_config = ConfigDict(from_attributes=True)
     id: int
-
-    class Config:
-        from_attributes = True
 
 class SummaryResponse(BaseModel):
     total_spend: float
